@@ -1,4 +1,5 @@
 import {inject} from '@loopback/core';
+import {repository} from '@loopback/repository';
 import {
   get, Request,
 
@@ -6,12 +7,13 @@ import {
   response,
   ResponseObject, RestBindings
 } from '@loopback/rest';
+import {CategoryRepository} from '../repositories';
 
 /**
  * OpenAPI response for ping()
  */
 const PING_RESPONSE: ResponseObject = {
-  description: 'Ping Response',
+  description: 'Ping Response 2',
   content: {
     'application/json': {
       schema: {
@@ -38,7 +40,9 @@ const PING_RESPONSE: ResponseObject = {
  * A simple controller to bounce back http requests
  */
 export class PingController {
-  constructor(@inject(RestBindings.Http.REQUEST) private req: Request) { }
+  constructor(
+    @inject(RestBindings.Http.REQUEST) private req: Request,
+    @repository(CategoryRepository ) private categoryRepo: CategoryRepository) { }
 
   // Map to `GET /ping`
   @get('/ping')
@@ -51,5 +55,15 @@ export class PingController {
       url: this.req.url,
       headers: Object.assign({}, this.req.headers),
     };
+  }
+
+  @get('/categories')
+  async index(){
+    await this.categoryRepo.create({
+      id: '1',
+      name: 'minha catego',
+      description: 'descricao'
+    })
+    return this.categoryRepo.find()
   }
 }
