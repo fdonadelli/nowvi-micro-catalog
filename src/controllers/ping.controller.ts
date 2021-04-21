@@ -42,7 +42,7 @@ const PING_RESPONSE: ResponseObject = {
 export class PingController {
   constructor(
     @inject(RestBindings.Http.REQUEST) private req: Request,
-    @repository(CategoryRepository ) private categoryRepo: CategoryRepository) { }
+    @repository(CategoryRepository) private categoryRepo: CategoryRepository) { }
 
   // Map to `GET /ping`
   @get('/ping')
@@ -58,11 +58,12 @@ export class PingController {
   }
 
   @get('/categories')
-  async index(){
+  async index() {
     await this.categoryRepo.create({
       id: '1',
       name: 'minha catego',
-      description: 'descricao'
+      created_at: new Date(),
+      updated_at: new Date()
     })
     return this.categoryRepo.find()
   }
