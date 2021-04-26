@@ -2,9 +2,11 @@ import {BootMixin} from '@loopback/boot';
 import {Application, ApplicationConfig} from '@loopback/core';
 import {RepositoryMixin} from '@loopback/repository';
 import {RestComponent, RestServer} from '@loopback/rest';
+import {RestExplorerBindings} from '@loopback/rest-explorer';
 import {ServiceMixin} from '@loopback/service-proxy';
 import path from 'path';
 import './bootstrap';
+import {RestExplorerComponent} from './components';
 import {MySequence} from './sequence';
 import {RabbitmqServer} from './servers';
 
@@ -24,11 +26,11 @@ export class NowviMicroCatalogApplication extends BootMixin(
     restServer.static('/', path.join(__dirname, '../public'));
     // Set up default home page
 
-    // // Customize @loopback/rest-explorer configuration here
-    // this.configure(RestExplorerBindings.COMPONENT).to({
-    //   path: '/explorer',
-    // });
-    // this.component(RestExplorerComponent);
+    // Customize @loopback/rest-explorer configuration here
+    this.bind(RestExplorerBindings.CONFIG).to({
+      path: '/explorer'
+    });
+    this.component(RestExplorerComponent);
 
     this.projectRoot = __dirname;
     // Customize @loopback/boot Booter Conventions here

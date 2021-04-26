@@ -1,11 +1,22 @@
 import {Context} from '@loopback/context';
 import {Server} from '@loopback/core';
-import {connect, Connection} from 'amqplib';
+import {repository} from '@loopback/repository';
+import {Channel, connect, Connection, Replies} from 'amqplib';
+import {Category} from '../models';
+import {CategoryRepository} from '../repositories';
+import AssertQueue = Replies.AssertQueue;
+import AssertExchange = Replies.AssertExchange;
 
 export class RabbitmqServer extends Context implements Server {
   private _listening: boolean;
+  conn: Connection;
+  channel: Channel;
 
-  conn: Connection
+  constructor(@repository(CategoryRepository) private categoryRepo: CategoryRepository) {
+    super();
+  }
+
+
   async start(): Promise<void> {
     this.conn = await connect({
       hostname: 'rabbitmq',
@@ -14,7 +25,48 @@ export class RabbitmqServer extends Context implements Server {
     })
     this._listening = true;
 
+    this.boot();
+
   };
+
+  async boot() {
+    this.channel = await this.conn.createChannel();
+    const queue: AssertQueue = await this.channel.assertQueue('micro-catalog/sync-videos');
+    const exchage: AssertExchange = await this.channel.assertExchange('amq.topic', 'topic');
+
+    await this.channel.bindQueue(queue.queue, exchage.exchange, 'model.*.*')
+
+    this.channel.consume(queue.queue, (message) => {
+      if (!message) {
+        return;
+      }
+      const data = JSON.parse(message.content.toString());
+      const [model, event] = message.fields.routingKey.split('.').slice(1);
+      this.sync({model, event, data})
+        .then(() => this.channel.ack(message))
+        .catch(() => this.channel.reject(message, false));
+
+    });
+
+  }
+
+  async sync({model, event, data}: {model: string, event: string, data: Category}) {
+    if (model === 'category') {
+      switch (event) {
+        case 'created':
+          await this.categoryRepo.create({
+            ...data,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+          break;
+        case 'updated':
+          await this.categoryRepo.updateById(data.id, data);
+          break;
+
+      }
+    }
+  }
 
   async stop(): Promise<void> {
     await this.conn.close()
